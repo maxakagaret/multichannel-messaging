@@ -213,6 +213,12 @@ app(ChannelManager::class)->extend('acme-sms', fn (Channel $channel, $app) => ne
 
 Then set `MESSAGING_SMS_DRIVER=acme-sms` and point the provider's callbacks to `/api/webhooks/sms/receipts`, signed with `MESSAGING_WEBHOOK_SECRET`.
 
+## How this was built
+
+This is a portfolio project. Its architecture is based on production modules I designed and built single-handedly in a commercial SaaS platform. This repository is a clean-room reimplementation: no proprietary code, names or data.
+
+The implementation was written with AI assistance (Claude Code). I defined the requirements and architecture, made the design decisions and reviewed the result. I'm happy to walk through any part of it.
+
 ## Out of scope
 
 - Authentication and multi-tenancy: the API is open in this demo.
