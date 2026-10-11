@@ -4,7 +4,7 @@ Bulk messaging engine for SMS, email, WhatsApp and Telegram built on Laravel que
 
 > Every provider is simulated. The channel drivers are fakes that behave like real providers (accept, time out, reject, send delivery receipts later). Nothing leaves your machine, and all data is synthetic.
 
-![stack](https://img.shields.io/badge/Laravel-12-red) ![stack](https://img.shields.io/badge/Vue-3-green) ![stack](https://img.shields.io/badge/Quasar-2-blue) ![tests](https://img.shields.io/badge/tests-Pest-purple)
+[![CI](https://github.com/maxakagaret/multichannel-messaging/actions/workflows/ci.yml/badge.svg)](https://github.com/maxakagaret/multichannel-messaging/actions/workflows/ci.yml) ![stack](https://img.shields.io/badge/Laravel-12-red) ![stack](https://img.shields.io/badge/Vue-3-green) ![stack](https://img.shields.io/badge/Quasar-2-blue) ![tests](https://img.shields.io/badge/tests-Pest-purple)
 
 ## What it demonstrates
 
