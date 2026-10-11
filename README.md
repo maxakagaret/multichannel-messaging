@@ -6,6 +6,16 @@ Bulk messaging engine for SMS, email, WhatsApp and Telegram built on Laravel que
 
 [![CI](https://github.com/maxakagaret/multichannel-messaging/actions/workflows/ci.yml/badge.svg)](https://github.com/maxakagaret/multichannel-messaging/actions/workflows/ci.yml) ![stack](https://img.shields.io/badge/Laravel-12-red) ![stack](https://img.shields.io/badge/Vue-3-green) ![stack](https://img.shields.io/badge/Quasar-2-blue) ![tests](https://img.shields.io/badge/tests-Pest-purple)
 
+## Screenshots
+
+![dashboard](docs/dashboard.png)
+
+*Delivery overview: per-channel funnel (delivered / read / failed, time to deliver), hourly throughput, top errors.*
+
+![campaign](docs/campaign.png)
+
+*A running campaign: recipients spread over days by the daily cap, SMS fallback messages, live message statuses.*
+
 ## What it demonstrates
 
 | Problem | Solution in this repo |
