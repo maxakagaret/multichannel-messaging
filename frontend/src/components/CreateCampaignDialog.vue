@@ -36,6 +36,32 @@
             dense
             :rules="[(v) => v >= 1 || 'At least 1']"
           />
+          <div class="row q-col-gutter-md">
+            <div class="col-12 col-sm-6">
+              <q-select
+                v-model="form.priority"
+                :options="priorityOptions"
+                label="Priority"
+                hint="Urgent may use the part of a warming-up sender's daily limit kept for it."
+                outlined
+                dense
+                emit-value
+                map-options
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-input
+                v-model.number="form.ttl_minutes"
+                type="number"
+                label="Deadline, minutes (optional)"
+                hint="Messages that cannot leave in time fail and go to the fallback channel."
+                outlined
+                dense
+                clearable
+                :rules="[(v) => v === null || v === '' || v >= 5 || 'At least 5 minutes']"
+              />
+            </div>
+          </div>
         </q-card-section>
 
         <q-card-actions align="right">
@@ -71,7 +97,14 @@ const form = reactive<NewCampaign>({
   ],
   audience: { tags: [] },
   daily_cap: 50,
+  priority: 'bulk',
+  ttl_minutes: null,
 })
+
+const priorityOptions = [
+  { label: 'Bulk (promotions, newsletters)', value: 'bulk' },
+  { label: 'Urgent (service notices, visit changes)', value: 'urgent' },
+]
 
 onMounted(async () => {
   tagOptions.value = (await api.tags()).map((t) => ({ label: `${t.tag} (${t.total})`, value: t.tag }))
@@ -80,7 +113,7 @@ onMounted(async () => {
 async function submit() {
   saving.value = true
   try {
-    await store.create(form)
+    await store.create({ ...form, ttl_minutes: form.ttl_minutes || null })
     $q.notify({ type: 'positive', message: 'Draft created' })
     open.value = false
   } catch (e) {

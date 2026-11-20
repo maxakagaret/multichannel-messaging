@@ -22,6 +22,16 @@ it('creates a draft campaign', function () use ($valid) {
         ->assertJsonPath('data.daily_cap', 25);
 });
 
+it('accepts a priority and a message deadline', function () use ($valid) {
+    $this->postJson('/api/campaigns', $valid(['priority' => 'urgent', 'ttl_minutes' => 180]))
+        ->assertCreated()
+        ->assertJsonPath('data.priority', 'urgent')
+        ->assertJsonPath('data.ttl_minutes', 180);
+
+    $this->postJson('/api/campaigns', $valid())->assertJsonPath('data.priority', 'bulk')->assertJsonPath('data.ttl_minutes', null);
+    $this->postJson('/api/campaigns', $valid(['priority' => 'asap']))->assertJsonValidationErrors('priority');
+});
+
 it('rejects a chain that starts with a fallback or repeats a channel', function () use ($valid) {
     $this->postJson('/api/campaigns', $valid(['channels' => [
         ['channel' => 'sms', 'fallback' => true],

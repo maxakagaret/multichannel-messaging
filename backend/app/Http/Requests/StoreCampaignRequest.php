@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
+use App\Enums\Priority;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -22,6 +23,8 @@ class StoreCampaignRequest extends FormRequest
             'audience.tags' => ['sometimes', 'array'],
             'audience.tags.*' => ['string', 'max:64'],
             'daily_cap' => ['sometimes', 'integer', 'min:1', 'max:100000'],
+            'priority' => ['sometimes', Rule::enum(Priority::class)],
+            'ttl_minutes' => ['sometimes', 'nullable', 'integer', 'min:5', 'max:10080'],
             'starts_on' => ['sometimes', 'nullable', 'date', 'after_or_equal:today'],
         ];
     }
@@ -45,6 +48,8 @@ class StoreCampaignRequest extends FormRequest
                 ->values()->all(),
             'audience' => ['tags' => array_values($this->input('audience.tags', []))],
             'daily_cap' => $this->integer('daily_cap', (int) config('messaging.daily_cap_default')),
+            'priority' => $this->enum('priority', Priority::class) ?? Priority::Bulk,
+            'ttl_minutes' => $this->input('ttl_minutes'),
             'starts_on' => $this->input('starts_on'),
             'status' => CampaignStatus::Draft,
         ];

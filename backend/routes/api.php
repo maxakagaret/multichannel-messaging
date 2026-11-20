@@ -16,6 +16,12 @@ Route::get('contacts/tags', [ContactController::class, 'tags']);
 
 Route::get('senders', [SenderController::class, 'index']);
 Route::patch('senders/{sender}', [SenderController::class, 'update']);
+Route::post('senders/{sender}/link-token', [SenderController::class, 'issueLinkToken']);
+Route::delete('senders/{sender}/link', [SenderController::class, 'unlink']);
+// Called by the tool holding the account credentials; the token is the authorization.
+Route::post('senders/link/{token}', [SenderController::class, 'redeemLinkToken'])
+    ->where('token', '[A-Za-z0-9]{48}')
+    ->middleware('throttle:10,1');
 
 Route::get('campaigns', [CampaignController::class, 'index']);
 Route::post('campaigns', [CampaignController::class, 'store']);

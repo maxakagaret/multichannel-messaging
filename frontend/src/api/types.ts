@@ -1,5 +1,6 @@
 export type Channel = 'sms' | 'email' | 'whatsapp' | 'telegram'
-export type MessageStatus = 'pending' | 'queued' | 'sent' | 'delivered' | 'read' | 'failed' | 'skipped'
+export type MessageStatus = 'pending' | 'queued' | 'sent' | 'delivered' | 'read' | 'failed' | 'deleted' | 'skipped'
+export type Priority = 'bulk' | 'urgent'
 export type CampaignStatus = 'draft' | 'running' | 'completed' | 'cancelled'
 
 export interface ChainEntry {
@@ -14,6 +15,8 @@ export interface Campaign {
   channels: ChainEntry[]
   audience: { tags: string[] } | null
   daily_cap: number
+  priority: Priority
+  ttl_minutes: number | null
   status: CampaignStatus
   starts_on: string | null
   launched_at: string | null
@@ -28,6 +31,8 @@ export interface NewCampaign {
   channels: ChainEntry[]
   audience: { tags: string[] }
   daily_cap: number
+  priority: Priority
+  ttl_minutes: number | null
 }
 
 export interface ChannelStats {
@@ -87,11 +92,24 @@ export interface Message {
   error_code: string | null
   error_message: string | null
   scheduled_for: string | null
+  expires_at: string | null
   sent_at: string | null
   delivered_at: string | null
   read_at: string | null
   failed_at: string | null
+  deleted_at: string | null
   events?: MessageEvent[]
+}
+
+export interface WarmupState {
+  profile: 'new' | 'after_quarantine'
+  day: number
+  days_total: number
+  silent: boolean
+  limit: number
+  used: number
+  pace: number
+  day_ends_at: string
 }
 
 export interface Sender {
@@ -99,8 +117,20 @@ export interface Sender {
   channel: Channel
   name: string
   is_active: boolean
+  account_id: string | null
+  linked: boolean
   last_used_at: string | null
   messages_count: number
+  quarantined_until: string | null
+  quarantines_count: number
+  warmup: WarmupState | null
+  warmup_starts_at: string | null
+}
+
+export interface LinkToken {
+  token: string
+  expires_at: string
+  upload_url: string
 }
 
 export interface Paginated<T> {

@@ -18,7 +18,10 @@
               class="q-mt-sm"
               :value="store.stats.planned_recipients ? store.stats.processed_recipients / store.stats.planned_recipients : 0"
             />
-            <div class="text-caption text-grey-7 q-mt-xs">daily cap: {{ store.current.daily_cap }}</div>
+            <div class="text-caption text-grey-7 q-mt-xs">
+              daily cap: {{ store.current.daily_cap }} · {{ store.current.priority }}
+              <template v-if="store.current.ttl_minutes"> · messages expire after {{ store.current.ttl_minutes }} min</template>
+            </div>
           </q-card-section></q-card>
         </div>
         <div class="col-12 col-md-4">
@@ -89,7 +92,7 @@ const dialog = ref(false)
 const selected = ref<number | null>(null)
 
 const channelOptions = ['whatsapp', 'telegram', 'sms', 'email'].map((c) => ({ label: c, value: c }))
-const statusOptions: MessageStatus[] = ['pending', 'queued', 'sent', 'delivered', 'read', 'failed', 'skipped']
+const statusOptions: MessageStatus[] = ['pending', 'queued', 'sent', 'delivered', 'read', 'failed', 'deleted', 'skipped']
 
 const columns: QTableColumn<Message>[] = [
   { name: 'id', label: '#', field: 'id', align: 'left' },

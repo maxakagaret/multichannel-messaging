@@ -14,6 +14,7 @@ export const statusColor: Record<MessageStatus, string> = {
   delivered: 'teal-6',
   read: 'green-7',
   failed: 'red-6',
+  deleted: 'brown-5',
   skipped: 'orange-7',
 }
 

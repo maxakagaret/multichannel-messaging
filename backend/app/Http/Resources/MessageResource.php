@@ -24,10 +24,12 @@ class MessageResource extends JsonResource
             'error_code' => $this->error_code,
             'error_message' => $this->error_message,
             'scheduled_for' => $this->scheduled_for?->toIso8601String(),
+            'expires_at' => $this->expires_at?->toIso8601String(),
             'sent_at' => $this->sent_at?->toIso8601String(),
             'delivered_at' => $this->delivered_at?->toIso8601String(),
             'read_at' => $this->read_at?->toIso8601String(),
             'failed_at' => $this->failed_at?->toIso8601String(),
+            'deleted_at' => $this->deleted_at?->toIso8601String(),
             'events' => $this->whenLoaded('events', fn () => $this->events->map(fn ($e) => [
                 'status' => $e->status->value,
                 'source' => $e->source,
