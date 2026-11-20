@@ -67,6 +67,7 @@ class StatusRecorder
             MessageStatus::Delivered => ['delivered_at' => $at],
             MessageStatus::Read => ['read_at' => $at],
             MessageStatus::Failed => ['failed_at' => $at],
+            MessageStatus::Deleted => ['deleted_at' => $at],
             default => [],
         };
     }

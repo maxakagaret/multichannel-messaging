@@ -1,6 +1,6 @@
 import axios from 'axios'
 import type {
-  Campaign, CampaignStats, Message, NewCampaign, Overview, Paginated, Sender,
+  Campaign, CampaignStats, LinkToken, Message, NewCampaign, Overview, Paginated, Sender,
 } from './types'
 
 const http = axios.create({
@@ -45,6 +45,12 @@ export const api = {
 
   toggleSender: (id: number, isActive: boolean) =>
     http.patch(`/senders/${id}`, { is_active: isActive }),
+
+  issueLinkToken: (id: number) =>
+    http.post<{ data: LinkToken }>(`/senders/${id}/link-token`).then((r) => r.data.data),
+
+  unlinkSender: (id: number) =>
+    http.delete(`/senders/${id}/link`),
 
   tags: () =>
     http.get<{ data: { tag: string; total: number }[] }>('/contacts/tags').then((r) => r.data.data),

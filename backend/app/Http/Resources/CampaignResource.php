@@ -17,6 +17,8 @@ class CampaignResource extends JsonResource
             'channels' => $this->channels,
             'audience' => $this->audience,
             'daily_cap' => $this->daily_cap,
+            'priority' => $this->priority->value,
+            'ttl_minutes' => $this->ttl_minutes,
             'status' => $this->status->value,
             'starts_on' => $this->starts_on?->toDateString(),
             'launched_at' => $this->launched_at?->toIso8601String(),

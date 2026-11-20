@@ -13,7 +13,8 @@ use Carbon\CarbonImmutable;
  */
 class ReceiptProcessor
 {
-    public const STATUSES = ['delivered', 'read', 'failed'];
+    /** "deleted": the message was removed from the chat after it arrived. */
+    public const STATUSES = ['delivered', 'read', 'failed', 'deleted'];
 
     public function __construct(private readonly StatusRecorder $status) {}
 

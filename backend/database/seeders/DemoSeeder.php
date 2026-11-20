@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
 use App\Enums\MessageStatus;
+use App\Enums\Priority;
 use App\Messaging\Planning\CampaignLauncher;
 use App\Models\Campaign;
 use App\Models\Contact;
@@ -30,10 +31,23 @@ class DemoSeeder extends Seeder
         $contacts = Contact::factory()->count(800)->create();
         $contacts->each(fn (Contact $c) => $c->syncTags(fake()->randomElements(self::TAGS, fake()->numberBetween(0, 2))));
 
+        $now = CarbonImmutable::now();
         $senders = collect([
-            [Channel::WhatsApp, 'WA line 1'], [Channel::WhatsApp, 'WA line 2'], [Channel::WhatsApp, 'WA line 3'],
-            [Channel::Telegram, 'Telegram bot'], [Channel::Sms, 'SMS short code'], [Channel::Email, 'Mail relay'],
-        ])->map(fn ($s) => Sender::create(['channel' => $s[0], 'name' => $s[1]]));
+            [Channel::WhatsApp, 'WA line 1', '+15550001001'], [Channel::WhatsApp, 'WA line 2', '+15550001002'],
+            [Channel::WhatsApp, 'WA line 3', '+15550001003'], [Channel::Telegram, 'Telegram bot', 'demo_bot'],
+            [Channel::Sms, 'SMS short code', '55001'], [Channel::Email, 'Mail relay', 'relay@example.test'],
+        ])->map(fn ($s) => Sender::create([
+            'channel' => $s[0], 'name' => $s[1], 'account_id' => $s[2], 'linked_at' => $now->subMonths(3),
+        ]));
+
+        // WA line 2 was re-linked to a new number yesterday: day 2 of its warm-up.
+        $senders->firstWhere('name', 'WA line 2')
+            ->startWarmup(Sender::WARMUP_NEW, $now->subHours(30))
+            ->forceFill(['account_id' => '+15550001022', 'linked_at' => $now->subHours(30)])
+            ->save();
+        // WA line 3 is listed in FAKE_RESTRICTED_SENDERS (.env.example): the fake
+        // provider refuses its sends, and after a few minutes of the running
+        // campaign it goes to quarantine and its messages fall back to SMS.
 
         $this->historicalCampaign($contacts, $senders);
 
@@ -49,6 +63,23 @@ class DemoSeeder extends Seeder
             'status' => CampaignStatus::Draft,
         ]);
         app(CampaignLauncher::class)->launch($running);
+
+        // Deadline-bound and urgent: a reminder is useless after the visit, so
+        // messages that cannot leave within 3 hours fail and go to SMS instead.
+        $reminders = Campaign::create([
+            'name' => 'Visit reminders',
+            'body' => 'Hi {{first_name}}, a reminder about your visit **tomorrow at 10:00**.',
+            'channels' => [
+                ['channel' => 'whatsapp', 'fallback' => false],
+                ['channel' => 'sms', 'fallback' => true],
+            ],
+            'audience' => ['tags' => ['new']],
+            'daily_cap' => 500,
+            'priority' => Priority::Urgent,
+            'ttl_minutes' => 180,
+            'status' => CampaignStatus::Draft,
+        ]);
+        app(CampaignLauncher::class)->launch($reminders);
 
         Campaign::create([
             'name' => 'VIP preview night (draft)',

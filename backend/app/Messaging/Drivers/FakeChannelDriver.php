@@ -4,8 +4,12 @@ namespace App\Messaging\Drivers;
 
 use App\Enums\Channel;
 use App\Messaging\Contracts\ChannelDriver;
+use App\Messaging\Contracts\LinksAccounts;
 use App\Messaging\Exceptions\PermanentDeliveryException;
+use App\Messaging\Exceptions\SenderLinkException;
+use App\Messaging\Exceptions\SenderRestrictedException;
 use App\Messaging\Exceptions\TransientDeliveryException;
+use App\Models\Sender;
 use Illuminate\Support\Str;
 
 /**
@@ -17,8 +21,11 @@ use Illuminate\Support\Str;
  *    (so the retry path is exercised and then succeeds);
  *  - everybody else is accepted, and — like a real provider — a delivery
  *    receipt arrives asynchronously a few seconds later (SimulateFakeReceipts).
+ *
+ * Senders listed in fake.restricted_senders behave like an account the
+ * messenger has limited: every send is refused with "sender_restricted".
  */
-class FakeChannelDriver implements ChannelDriver
+class FakeChannelDriver implements ChannelDriver, LinksAccounts
 {
     public function __construct(
         private readonly Channel $channel,
@@ -28,6 +35,10 @@ class FakeChannelDriver implements ChannelDriver
 
     public function send(OutboundMessage $message): SendReceipt
     {
+        if ($message->senderName !== null && in_array($message->senderName, $this->config['restricted_senders'] ?? [], true)) {
+            throw new SenderRestrictedException;
+        }
+
         $bucket = self::bucket($message->channel, $message->recipient);
         $permanent = $this->config['permanent_failure_percent'];
         $transient = $this->config['transient_failure_percent'];
@@ -48,6 +59,18 @@ class FakeChannelDriver implements ChannelDriver
         // Delivery receipts are emitted by SimulateFakeReceipts once the "sent"
         // status (with this provider id) is stored — see that listener.
         return $receipt;
+    }
+
+    /** Accepts {"account": "<id>", "keys": [...]}; a real driver passes them to the provider. */
+    public function link(Sender $sender, #[\SensitiveParameter] array $credentials): string
+    {
+        $account = $credentials['account'] ?? null;
+
+        if (! is_string($account) || $account === '' || empty($credentials['keys']) || ! is_array($credentials['keys'])) {
+            throw new SenderLinkException('invalid_credentials');
+        }
+
+        return $account;
     }
 
     /** Stable 0..99 bucket for a recipient in a channel. */

@@ -80,3 +80,16 @@ it('validates the payload', function () {
     signedReceipt([['provider_message_id' => 'wa-123', 'status' => 'exploded']])
         ->assertUnprocessable()->assertJsonValidationErrors('events.0.status');
 });
+
+it('marks a message removed from the chat as deleted and keeps it there', function () {
+    signedReceipt([
+        ['provider_message_id' => 'wa-123', 'status' => 'delivered'],
+        ['provider_message_id' => 'wa-123', 'status' => 'deleted'],
+        ['provider_message_id' => 'wa-123', 'status' => 'read'], // late receipt
+    ])->assertAccepted()->assertJson(['applied' => 2]);
+
+    $message = $this->message->refresh();
+    expect($message->status)->toBe(MessageStatus::Deleted)
+        ->and($message->deleted_at)->not->toBeNull()
+        ->and(Message::where('fallback_of_id', $message->id)->exists())->toBeFalse();
+});

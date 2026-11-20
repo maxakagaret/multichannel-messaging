@@ -18,6 +18,11 @@ export const useOverviewStore = defineStore('overview', {
       this.senders = await api.senders()
     },
 
+    async unlinkSender(sender: Sender) {
+      await api.unlinkSender(sender.id)
+      await this.fetchSenders()
+    },
+
     async toggleSender(sender: Sender) {
       const next = !sender.is_active
       await api.toggleSender(sender.id, next)

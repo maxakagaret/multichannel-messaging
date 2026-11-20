@@ -7,8 +7,12 @@ use App\Messaging\ChannelManager;
 use App\Messaging\Delivery\StatusRecorder;
 use App\Messaging\Drivers\OutboundMessage;
 use App\Messaging\Exceptions\PermanentDeliveryException;
+use App\Messaging\Exceptions\SenderRestrictedException;
 use App\Messaging\Exceptions\TransientDeliveryException;
+use App\Messaging\Senders\CircuitBreaker;
+use App\Messaging\Senders\SenderQuarantine;
 use App\Models\Message;
+use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -27,6 +31,12 @@ use Throwable;
  *
  * The job is idempotent: it only acts on messages that are still "queued", so a
  * duplicated or late job (e.g. after a campaign was cancelled) is a no-op.
+ *
+ * Guards before any provider call, whatever path queued the job:
+ *  - an expired message is never sent (stale content is worse than none);
+ *  - a message whose sender is quarantined fails and falls back to the next
+ *    channel. It is not moved to another number: the recipient knows the
+ *    conversation by the number it comes from.
  */
 class SendMessage implements ShouldQueue
 {
@@ -58,11 +68,27 @@ class SendMessage implements ShouldQueue
         return [(new RateLimited('messaging-sender'))->releaseAfter(30)];
     }
 
-    public function handle(ChannelManager $channels, StatusRecorder $status): void
+    public function handle(ChannelManager $channels, StatusRecorder $status, CircuitBreaker $breaker, SenderQuarantine $quarantine): void
     {
         $message = Message::with(['sender', 'contact'])->find($this->messageId);
+        $now = CarbonImmutable::now();
 
         if (! $message || $message->status !== MessageStatus::Queued) {
+            return;
+        }
+
+        if ($message->isExpired($now)) {
+            $status->transition($message, MessageStatus::Failed, 'job', [
+                'error_code' => 'expired',
+                'error_message' => 'Not sent: the message deadline passed at '.$message->expires_at->toIso8601String().'.',
+            ]);
+
+            return;
+        }
+
+        if ($message->sender?->isQuarantined($now)) {
+            $this->failForQuarantine($message, $status);
+
             return;
         }
 
@@ -77,8 +103,10 @@ class SendMessage implements ShouldQueue
             attempt: $message->attempts,
         );
 
+        $breakerKey = $message->sender_id ? "sender:{$message->sender_id}" : "channel:{$message->channel->value}";
+
         try {
-            $receipt = $channels->channel($message->channel)->send($outbound);
+            $receipt = $breaker->call($breakerKey, fn () => $channels->channel($message->channel)->send($outbound));
         } catch (PermanentDeliveryException $e) {
             $status->transition($message, MessageStatus::Failed, 'job', [
                 'error_code' => $e->errorCode,
@@ -86,14 +114,18 @@ class SendMessage implements ShouldQueue
             ], ['attempt' => $message->attempts]);
 
             return;
+        } catch (SenderRestrictedException $e) {
+            if ($message->sender && $quarantine->recordRestriction($message->sender, $e->errorCode, $now)) {
+                $this->failForQuarantine($message, $status);
+
+                return;
+            }
+
+            $this->recordRetry($message, $e);
+
+            throw $e;
         } catch (TransientDeliveryException $e) {
-            $message->forceFill(['error_code' => $e->errorCode, 'error_message' => $e->getMessage()])->save();
-            $message->events()->create([
-                'status' => MessageStatus::Queued,
-                'source' => 'job',
-                'payload' => ['retry' => true, 'error_code' => $e->errorCode, 'attempt' => $message->attempts],
-                'occurred_at' => now(),
-            ]);
+            $this->recordRetry($message, $e);
 
             throw $e;
         }
@@ -116,6 +148,26 @@ class SendMessage implements ShouldQueue
         app(StatusRecorder::class)->transition($message, MessageStatus::Failed, 'job', [
             'error_code' => $exception instanceof TransientDeliveryException ? $exception->errorCode : 'retries_exhausted',
             'error_message' => 'Gave up after '.$message->attempts.' attempt(s): '.($exception?->getMessage() ?? 'unknown error'),
+        ]);
+    }
+
+    private function failForQuarantine(Message $message, StatusRecorder $status): void
+    {
+        $status->transition($message, MessageStatus::Failed, 'job', [
+            'error_code' => 'sender_quarantined',
+            'error_message' => "Sender {$message->sender->name} is quarantined until "
+                .$message->sender->quarantined_until->toIso8601String().'.',
+        ]);
+    }
+
+    private function recordRetry(Message $message, TransientDeliveryException $e): void
+    {
+        $message->forceFill(['error_code' => $e->errorCode, 'error_message' => $e->getMessage()])->save();
+        $message->events()->create([
+            'status' => MessageStatus::Queued,
+            'source' => 'job',
+            'payload' => ['retry' => true, 'error_code' => $e->errorCode, 'attempt' => $message->attempts],
+            'occurred_at' => now(),
         ]);
     }
 }

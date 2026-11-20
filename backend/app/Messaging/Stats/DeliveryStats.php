@@ -63,7 +63,8 @@ class DeliveryStats
                 $s->value => (int) ($counts->get($channel->value)?->firstWhere('status', $s->value)?->total ?? 0),
             ]);
 
-            $delivered = $byStatus['delivered'] + $byStatus['read'];
+            // A deleted message reached the chat before it was removed.
+            $delivered = $byStatus['delivered'] + $byStatus['read'] + $byStatus['deleted'];
             $attempted = $byStatus['sent'] + $delivered + $byStatus['failed'];
 
             return [

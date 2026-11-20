@@ -16,4 +16,8 @@ it('only moves forward through the lifecycle', function (MessageStatus $from, Me
     'queued can be skipped (campaign cancelled)' => [MessageStatus::Queued, MessageStatus::Skipped, true],
     'sent cannot be skipped' => [MessageStatus::Sent, MessageStatus::Skipped, false],
     'skipped is terminal' => [MessageStatus::Skipped, MessageStatus::Queued, false],
+    'read can be deleted from the chat' => [MessageStatus::Read, MessageStatus::Deleted, true],
+    'failed was never in the chat, cannot be deleted' => [MessageStatus::Failed, MessageStatus::Deleted, false],
+    'queued cannot be deleted' => [MessageStatus::Queued, MessageStatus::Deleted, false],
+    'deleted is terminal (late read receipt)' => [MessageStatus::Deleted, MessageStatus::Read, false],
 ]);

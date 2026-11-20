@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
+use App\Enums\Priority;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,12 +15,16 @@ class Campaign extends Model
 
     protected $guarded = [];
 
+    protected $attributes = ['priority' => 'bulk'];
+
     protected function casts(): array
     {
         return [
             'channels' => 'array',
             'audience' => 'array',
             'status' => CampaignStatus::class,
+            'priority' => Priority::class,
+            'ttl_minutes' => 'integer',
             'starts_on' => 'immutable_date',
             'launched_at' => 'immutable_datetime',
             'completed_at' => 'immutable_datetime',
